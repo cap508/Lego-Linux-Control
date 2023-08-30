@@ -2,11 +2,12 @@ import sys
 import time
 import os
 
-baudrate = 115200
-device = '/dev/ttyACM1'
+baudrate = 115200 # This is the standard board rate to communicate with the Lego Hub
+# This is the port that the Hub identifies itself as when connected by wire to my laptop
+device = '/dev/ttyACM1' 
 wait= 0
 
-
+# The Pyboard class here is lifted wholesale from a Jetson nano project by beemsoft
 
 try:
     stdout = sys.stdout.buffer
@@ -224,6 +225,21 @@ class Pyboard:
 setattr(Pyboard, "exec", Pyboard.exec_)
 
 
+# Below are a couple of functions that demonstrate how a program can be sent to the Lego Hub
+
+# This one simply displays a message on the Hub with a wait to complete
+def say_text_wait(pyb, sentence):
+    command = f"""\
+from hub import light_matrix
+import runloop
+async def main():
+    await light_matrix.write('{sentence}')
+
+runloop.run(main())
+"""
+    pyb.exec(command)
+
+# This one simply displays a message on the Hub 
 def say_text(pyb, sentence):
     command = f"""\
 from hub import light_matrix
@@ -231,6 +247,8 @@ light_matrix.write('{sentence}')
 """
     pyb.exec(command)
 
+# This function turns the motor through 2 compelte revolutions then returns some data using the 
+# print command.
 def turn_motor(pyb):
     command = f"""\
 from hub import port
@@ -245,14 +263,25 @@ print(data)
 
 
 def main():
+    # Setup the lego hub
     pyb = Pyboard(device, baudrate, wait)
     pyb.enter_raw_repl()
 
+    # Writing to the local machine
     print('Message sent to Hub')
+
+    #Sending commands to the hub
+    say_text_wait(pyb, 'Starting')
+    
+    # You won't see this message as it will do the next steps without waiting.
     say_text(pyb, 'Hello World')
     data = turn_motor(pyb)
+    
+    #print out the data that was returned
     print(data)
 
+    # This shows how you send a complete program to the board to be run
+    pyb.execfile("test.py")
 
     pyb.exit_raw_repl()
     pyb.close()
